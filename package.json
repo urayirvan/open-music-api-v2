@@ -4,8 +4,10 @@
   "description": "OpenMusic versi 2 Dicoding Submission",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server.js",
-    "lint": "eslint ./"
+    "start-prod": "NODE_ENV=production node ./src/server.js",
+    "start-dev": "nodemon ./src/server.js",
+    "lint": "eslint ./src",
+    "migrate": "node-pg-migrate"
   },
   "keywords": [
     "nodejs",
@@ -14,7 +16,12 @@
   "author": "urayirvan",
   "license": "ISC",
   "dependencies": {
-    "@hapi/hapi": "^20.1.5"
+    "@hapi/hapi": "^20.1.5",
+    "dotenv": "^10.0.0",
+    "joi": "^17.4.0",
+    "nanoid": "^3.1.23",
+    "node-pg-migrate": "^5.10.0",
+    "pg": "^8.6.0"
   },
   "devDependencies": {
     "eslint": "^7.30.0",

@@ -4,10 +4,12 @@ const { nanoid } = require('nanoid');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
+const { getAllPlaylists } = require('../../utils');
 
 class PlaylistsService {
-  constructor() {
+  constructor(playlistsongService) {
     this._pool = new Pool();
+    this._playlistsongService = playlistsongService;
   }
 
   async addPlaylist({ name, owner }) {
@@ -29,17 +31,20 @@ class PlaylistsService {
 
   async getPlaylists(owner) {
     const query = {
-      text: 'SELECT * FROM playlists WHERE owner = $1',
+      text: `SELECT playlists.*, users.username
+      FROM playlists
+      LEFT JOIN users ON users.id = playlists.owner
+      WHERE playlists.owner = $1`,
       values: [owner],
     };
     const result = await this._pool.query(query);
-    return result.rows[0].id;
+    return result.rows.map(getAllPlaylists);
   }
 
-  async deletePlaylistById(id) {
+  async deletePlaylistById(id, owner) {
     const query = {
-      text: 'DELETE FROM playlists WHERE id = $1 RETURNING id',
-      values: [id],
+      text: 'DELETE FROM playlists WHERE id = $1 AND owner = $2 RETURNING id',
+      values: [id, owner],
     };
 
     const result = await this._pool.query(query);
@@ -61,10 +66,25 @@ class PlaylistsService {
       throw new NotFoundError('Resource yang Anda minta tidak ditemukan');
     }
 
-    const note = result.rows[0];
+    const playlist = result.rows[0];
 
-    if (note.owner !== owner) {
+    if (playlist.owner !== owner) {
       throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+    }
+  }
+
+  async verifyPlaylistAccess(playlistId, userId) {
+    try {
+      await this.verifyPlaylistOwner(playlistId, userId);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      try {
+        await this._playlistsongService.verifyPlaylistsong(playlistId, userId);
+      } catch {
+        throw error;
+      }
     }
   }
 }

@@ -62,7 +62,7 @@ class PlaylistsHandler {
         playlists: playlists.map((playlist) => ({
           id: playlist.id,
           name: playlist.name,
-          username: playlist.owner,
+          username: playlist.username,
         })),
       },
     };
@@ -70,11 +70,11 @@ class PlaylistsHandler {
 
   async deletePlaylistByIdHandler(request, h) {
     try {
-      const { id } = request.params;
+      const { playlistId } = request.params;
       const { id: credentialId } = request.auth.credentials;
 
-      await this._service.verifyPlaylistOwner(id, credentialId);
-      await this._service.deletePlaylistById(id);
+      await this._service.verifyPlaylistOwner(playlistId, credentialId);
+      await this._service.deletePlaylistById(playlistId, credentialId);
 
       return {
         status: 'success',

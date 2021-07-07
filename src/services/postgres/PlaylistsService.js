@@ -7,9 +7,9 @@ const AuthorizationError = require('../../exceptions/AuthorizationError');
 const { getAllPlaylists } = require('../../utils');
 
 class PlaylistsService {
-  constructor(playlistsongService) {
+  constructor(collaborationService) {
     this._pool = new Pool();
-    this._playlistsongService = playlistsongService;
+    this._collaborationService = collaborationService;
   }
 
   async addPlaylist({ name, owner }) {
@@ -34,7 +34,9 @@ class PlaylistsService {
       text: `SELECT playlists.*, users.username
       FROM playlists
       LEFT JOIN users ON users.id = playlists.owner
-      WHERE playlists.owner = $1`,
+      LEFT JOIN collaborations ON collaborations.playlist_id = playlists.id
+      WHERE playlists.owner = $1 OR collaborations.user_id = $1
+      GROUP BY playlists.id, users.id`,
       values: [owner],
     };
     const result = await this._pool.query(query);
@@ -81,7 +83,7 @@ class PlaylistsService {
         throw error;
       }
       try {
-        await this._playlistsongService.verifyPlaylistsong(playlistId, userId);
+        await this._collaborationService.verifyCollaborator(playlistId, userId);
       } catch {
         throw error;
       }

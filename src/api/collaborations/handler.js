@@ -1,31 +1,31 @@
+/* eslint-disable max-len */
 /* eslint-disable no-underscore-dangle */
 const ClientError = require('../../exceptions/ClientError');
 
-class PlaylistsHandler {
-  constructor(service, validator) {
-    this._service = service;
+class CollaborationsHandler {
+  constructor(collaborationsService, playlistsService, validator) {
+    this._collaborationsService = collaborationsService;
+    this._playlistsService = playlistsService;
     this._validator = validator;
 
-    this.postPlaylistHandler = this.postPlaylistHandler.bind(this);
-    this.getPlaylistsHandler = this.getPlaylistsHandler.bind(this);
-    this.deletePlaylistByIdHandler = this.deletePlaylistByIdHandler.bind(this);
+    this.postCollaborationHandler = this.postCollaborationHandler.bind(this);
+    this.deleteCollaborationHandler = this.deleteCollaborationHandler.bind(this);
   }
 
-  async postPlaylistHandler(request, h) {
+  async postCollaborationHandler(request, h) {
     try {
-      this._validator.validatePlaylistPayload(request.payload);
-      const { name } = request.payload;
+      this._validator.validateCollaborationPayload(request.payload);
       const { id: credentialId } = request.auth.credentials;
+      const { playlistId, userId } = request.payload;
 
-      const playlistId = await this._service.addPlaylist({
-        name, owner: credentialId,
-      });
+      await this._playlistsService.verifyPlaylistOwner(playlistId, credentialId);
+      const collaborationId = await this._collaborationsService.addCollaboration(playlistId, userId);
 
       const response = h.response({
         status: 'success',
-        message: 'Playlist berhasil ditambahkan',
+        message: 'Kolaborasi berhasil ditambahkan',
         data: {
-          playlistId,
+          collaborationId,
         },
       });
       response.code(201);
@@ -51,32 +51,18 @@ class PlaylistsHandler {
     }
   }
 
-  async getPlaylistsHandler(request) {
-    const { id: credentialId } = request.auth.credentials;
-    const playlists = await this._service.getPlaylists(credentialId);
-    return {
-      status: 'success',
-      data: {
-        playlists: playlists.map((playlist) => ({
-          id: playlist.id,
-          name: playlist.name,
-          username: playlist.username,
-        })),
-      },
-    };
-  }
-
-  async deletePlaylistByIdHandler(request, h) {
+  async deleteCollaborationHandler(request, h) {
     try {
-      const { playlistId } = request.params;
+      this._validator.validateCollaborationPayload(request.payload);
       const { id: credentialId } = request.auth.credentials;
+      const { playlistId, userId } = request.payload;
 
-      await this._service.verifyPlaylistOwner(playlistId, credentialId);
-      await this._service.deletePlaylistById(playlistId, credentialId);
+      await this._playlistsService.verifyPlaylistOwner(playlistId, credentialId);
+      await this._collaborationsService.deleteCollaboration(playlistId, userId);
 
       return {
         status: 'success',
-        message: 'Playlist berhasil dihapus',
+        message: 'Kolaborasi berhasil dihapus',
       };
     } catch (error) {
       if (error instanceof ClientError) {
@@ -100,4 +86,4 @@ class PlaylistsHandler {
   }
 }
 
-module.exports = PlaylistsHandler;
+module.exports = CollaborationsHandler;
